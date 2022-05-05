@@ -37,7 +37,7 @@ const Login: React.FC<Props> = ({ history }) => {
     login(email, password).then(
       () => {
         history.push("/profile");
-        window.location.reload();
+        // window.location.reload();
       },
       (error) => {
         const resMessage =

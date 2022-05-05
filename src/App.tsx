@@ -26,8 +26,8 @@ const App: React.FC = () => {
 
     if (user) {
       setCurrentUser(user);
-      setShowModeratorBoard(user.roles.includes("ROLE_MODERATOR"));
-      setShowAdminBoard(user.roles.includes("ROLE_ADMIN"));
+      setShowModeratorBoard(user.role === "moderator");
+      setShowAdminBoard(user.role === "admin");
     }
 
     EventBus.on("logout", logOut);

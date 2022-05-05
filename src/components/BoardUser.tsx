@@ -9,7 +9,7 @@ const BoardUser: React.FC = () => {
   useEffect(() => {
     getUserBoard().then(
       (response) => {
-        setContent(response.data);
+        setContent(response.data.message);
       },
       (error) => {
         const _content =
