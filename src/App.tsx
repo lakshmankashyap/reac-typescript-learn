@@ -1,69 +1,130 @@
-import React, { useEffect, useState } from 'react'
-import TodoItem from './components/TodoItem'
-import AddTodo from './components/AddTodo'
-import { getTodos, addTodo, updateTodo, deleteTodo } from './API'
+import React from "react";
+import { useState, useEffect } from "react";
+import { Switch, Route, Link } from "react-router-dom";
+import "bootstrap/dist/css/bootstrap.min.css";
+import "./App.css";
+
+import * as AuthService from "./services/auth.service";
+import IUser from './types/user.type';
+
+import Login from "./components/Login";
+import Register from "./components/Register";
+import Home from "./components/Home";
+import Profile from "./components/Profile";
+import BoardUser from "./components/BoardUser";
+import BoardModerator from "./components/BoardModerator";
+import BoardAdmin from "./components/BoardAdmin";
+
+import EventBus from "./common/EventBus";
 
 const App: React.FC = () => {
-  const [todos, setTodos] = useState<ITodo[]>([])
-
+  const [showModeratorBoard, setShowModeratorBoard] = useState<boolean>(false);
+  const [showAdminBoard, setShowAdminBoard] = useState<boolean>(false);
+  const [currentUser, setCurrentUser] = useState<IUser | undefined>(undefined);
   useEffect(() => {
-    fetchTodos()
-  }, [])
+    const user = AuthService.getCurrentUser();
 
-  const fetchTodos = (): void => {
-    getTodos()
-    .then(({ data: { todos } }: ITodo[] | any) => setTodos(todos))
-    .catch((err: Error) => console.log(err))
-  }
-
- const handleSaveTodo = (e: React.FormEvent, formData: ITodo): void => {
-   e.preventDefault()
-   addTodo(formData)
-   .then(({ status, data }) => {
-    if (status !== 201) {
-      throw new Error('Error! Todo not saved')
+    if (user) {
+      setCurrentUser(user);
+      setShowModeratorBoard(user.roles.includes("ROLE_MODERATOR"));
+      setShowAdminBoard(user.roles.includes("ROLE_ADMIN"));
     }
-    setTodos(data.todos)
-  })
-  .catch((err) => console.log(err))
-}
 
-  const handleUpdateTodo = (todo: ITodo): void => {
-    updateTodo(todo)
-    .then(({ status, data }) => {
-        if (status !== 200) {
-          throw new Error('Error! Todo not updated')
-        }
-        setTodos(data.todos)
-      })
-      .catch((err) => console.log(err))
-  }
+    EventBus.on("logout", logOut);
 
-  const handleDeleteTodo = (_id: string): void => {
-    deleteTodo(_id)
-    .then(({ status, data }) => {
-        if (status !== 200) {
-          throw new Error('Error! Todo not deleted')
-        }
-        setTodos(data.todos)
-      })
-      .catch((err) => console.log(err))
-  }
+    return () => {
+      EventBus.remove("logout", logOut);
+    };
+  }, []);
+
+  const logOut = () => {
+    AuthService.logout();
+    setShowModeratorBoard(false);
+    setShowAdminBoard(false);
+    setCurrentUser(undefined);
+  };
 
   return (
-    <main className='App'>
-      <h1>My Todos</h1>
-      <AddTodo saveTodo={handleSaveTodo} />
-      {todos.map((todo: ITodo) => (
-        <TodoItem
-          key={todo._id}
-          updateTodo={handleUpdateTodo}
-          deleteTodo={handleDeleteTodo}
-          todo={todo}
-        />
-      ))}
-    </main>
-  )
-}
+    <div>
+      <nav className="navbar navbar-expand navbar-dark bg-dark">
+        <Link to={"/"} className="navbar-brand">
+          bezKoder
+        </Link>
+        <div className="navbar-nav mr-auto">
+          <li className="nav-item">
+            <Link to={"/home"} className="nav-link">
+              Home
+            </Link>
+          </li>
 
-export default App
+          {showModeratorBoard && (
+            <li className="nav-item">
+              <Link to={"/mod"} className="nav-link">
+                Moderator Board
+              </Link>
+            </li>
+          )}
+
+          {showAdminBoard && (
+            <li className="nav-item">
+              <Link to={"/admin"} className="nav-link">
+                Admin Board
+              </Link>
+            </li>
+          )}
+
+          {currentUser && (
+            <li className="nav-item">
+              <Link to={"/user"} className="nav-link">
+                User
+              </Link>
+            </li>
+          )}
+        </div>
+
+        {currentUser ? (
+          <div className="navbar-nav ml-auto">
+            <li className="nav-item">
+              <Link to={"/profile"} className="nav-link">
+                {currentUser.name}
+              </Link>
+            </li>
+            <li className="nav-item">
+              <a href="/login" className="nav-link" onClick={logOut}>
+                LogOut
+              </a>
+            </li>
+          </div>
+        ) : (
+          <div className="navbar-nav ml-auto">
+            <li className="nav-item">
+              <Link to={"/login"} className="nav-link">
+                Login
+              </Link>
+            </li>
+
+            <li className="nav-item">
+              <Link to={"/register"} className="nav-link">
+                Sign Up
+              </Link>
+            </li>
+          </div>
+        )}
+      </nav>
+
+      <div className="container mt-3">
+        <Switch>
+          <Route exact path={["/", "/home"]} component={Home} />
+          <Route exact path="/login" component={Login} />
+          <Route exact path="/register" component={Register} />
+          <Route exact path="/profile" component={Profile} />
+          <Route path="/user" component={BoardUser} />
+          <Route path="/mod" component={BoardModerator} />
+          <Route path="/admin" component={BoardAdmin} />
+        </Switch>
+      </div>
+    </div>
+  );
+};
+
+export default App;
